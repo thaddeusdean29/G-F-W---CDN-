@@ -1,0 +1,16 @@
+[Unit]
+Description=CDN Panel Management Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/bin/cdnpanel --config /etc/cdnpanel/config.json
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,27 @@
+[Unit]
+Description=CDN Edge Agent Service
+After=network.target
+# cdnedge 停着的每一秒 CC/WAF 都不在线（Tengine 对 WAF 子请求的 502 是放行的）：
+# 默认限速是 10 秒内最多 5 次，崩溃循环几次后 systemd 会把服务永久停在 failed，
+# 面板上只显示「离线」，不会有人来救。所以 StartLimitIntervalSec=0 + Restart=always。
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=root
+# --token 会把密钥暴露在 ps/命令行里，生产环境一律用 --token-file（权限 600）。
+ExecStart=/usr/local/bin/cdnedge --listen 0.0.0.0:9090 --token-file /etc/cdnpanel/edge.token --config /etc/cdnpanel/config.json --xdp-iface eth0 --xdp-obj /usr/local/bin/cdn_xdp.o
+Restart=always
+RestartSec=2s
+StandardOutput=journal
+StandardError=journal
+LimitNOFILE=65536
+# 与 install.sh、internal/deploy/ssh.go 写的完全一致（改一处要同步另两处，比对测试在 internal/deploy）。
+# 只兜内存泄漏，不兜设计容量：internal/waf 各表硬上限合计约 400MB，加 2 倍 GC 余量后
+# RSS 天花板约 800MB，所以 1G/2G 都在线性余量之外。调小会在攻击高峰期把 cdnedge
+# 直接 OOM 掉，那几十秒等于 CC/WAF 全体下线。
+MemoryHigh=1G
+MemoryMax=2G
+
+[Install]
+WantedBy=multi-user.target
