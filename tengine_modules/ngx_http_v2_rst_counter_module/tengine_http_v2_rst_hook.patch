@@ -1,0 +1,26 @@
+--- a/src/http/v2/ngx_http_v2.c
++++ b/src/http/v2/ngx_http_v2.c
+@@ -8,6 +8,9 @@
+ #include <ngx_config.h>
+ #include <ngx_core.h>
+ #include <ngx_http.h>
++
++/* HTTP/2 RST Counter 模块外部接口 */
++extern ngx_int_t ngx_http_v2_rst_handler(ngx_http_request_t *r);
+
+
+ static void ngx_http_v2_read_handler(ngx_event_t *rev);
+@@ -3456,6 +3459,13 @@ ngx_http_v2_state_rst_stream(ngx_http_v2_connection_t *h2c, u_char *pos,
+
+     ngx_http_v2_finalize_connection(h2c, stream->node->id,
+                                      NGX_HTTP_REQUEST_TIME_OUT);
++
++    /* 通知 RST Counter 模块 */
++    if (stream->request) {
++        (void) ngx_http_v2_rst_handler(stream->request);
++    }
++
++    h2c->state.stream = NULL;
+
+     return ngx_http_v2_state_complete(h2c, pos, end);
+ }
